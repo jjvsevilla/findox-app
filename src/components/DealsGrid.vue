@@ -1,9 +1,13 @@
 <template>
-  <Grid label="deal(s)" :data="gridData" :columnDefs="gridColumnDefs"></Grid>
+  <GridCompositionAPI
+    label="deal(s)"
+    :data="gridData"
+    :columnDefs="gridColumnDefs"
+  ></GridCompositionAPI>
 </template>
 
 <script>
-import Grid from "./Grid.vue";
+import GridCompositionAPI from "./GridCompositionAPI.vue";
 import dealsDS from "../data/deals_dataset.json";
 import { getDealsDataByKey } from "../helpers/datasource";
 
@@ -16,8 +20,8 @@ const dealTypes = getDealsDataByKey(dealsDS, "DealTypes");
 
 export default {
   name: "DealsGrid",
-  components: { Grid },
-  data() {
+  components: { GridCompositionAPI },
+  setup() {
     return {
       gridData: [...holdings],
       gridColumnDefs: [

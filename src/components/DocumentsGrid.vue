@@ -1,13 +1,13 @@
 <template>
-  <Grid
+  <GridCompositionAPI
     label="document(s)"
     :data="gridData"
     :columnDefs="gridColumnDefs"
-  ></Grid>
+  ></GridCompositionAPI>
 </template>
 
 <script>
-import Grid from "./Grid.vue";
+import GridCompositionAPI from "./GridCompositionAPI.vue";
 import docsDS from "../data/docs_dataset.json";
 import { getDealsDataByKey } from "../helpers/datasource";
 
@@ -15,8 +15,8 @@ const holdings = getDealsDataByKey(docsDS, "docs")
 
 export default {
   name: "DocumentsGrid",
-  components: { Grid },
-  data() {
+  components: { GridCompositionAPI },
+  setup() {
     return {
       gridData: [...holdings],
       gridColumnDefs: [
