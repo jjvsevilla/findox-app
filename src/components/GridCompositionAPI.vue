@@ -57,13 +57,13 @@
         <div class="filter-sorting">
           <button
             @click="sortBy(selectedColumnDef.field, 1)"
-            :class="{ asc: sortList[selectedColumnDef.field] === 1}"
+            :class="{ asc: sortList[selectedColumnDef.field] === 1 }"
           >
             Sort A to Z (asc)
           </button>
           <button
             @click="sortBy(selectedColumnDef.field, -1)"
-            :class="{ desc: sortList[selectedColumnDef.field] === -1}"
+            :class="{ desc: sortList[selectedColumnDef.field] === -1 }"
           >
             Sort Z to A (desc)
           </button>
@@ -97,24 +97,33 @@
           </div>
         </div>
         <div class="filter-actions">
-          <button @click="clearFilter(selectedColumnDef.field)">
+          <button
+            @click="clearFilter(selectedColumnDef.field)"
+            class="clear-filter"
+          >
             Clear Filter
           </button>
           <button
             @click="
               filterBy(selectedColumnDef.field, filterInput, filterCheckbox)
             "
+            class="apply-filter"
             type="submit"
           >
             Apply Filter
           </button>
-          <button @click="closeMenu">Close</button>
+          <button @click="closeMenu" class="close-filter">Close</button>
         </div>
       </div>
       <div class="table-total-wrapper">
         <span>
           Showing <b>{{ filteredData.length }} </b>{{ label }}.
         </span>
+        <div class="table-actions">
+          <button :disabled="!filteredData.length" @click="exportToCSV">
+            Export
+          </button>
+        </div>
       </div>
       <div
         class="table-body-wrapper"
@@ -137,12 +146,8 @@
 
 <script>
 import { ref, computed } from "@vue/composition-api";
-
-function getNextOrder(currentFieldOrder){
-  if (currentFieldOrder === undefined) return 1;
-  if (currentFieldOrder === 1) return -1;
-  return undefined;
-}
+import { tableToCSV, downloadCSV } from "../helpers/export";
+import { getNextOrder, filterData, sortData } from "../helpers/actions";
 
 export default {
   name: "GridCompositionAPI",
@@ -151,7 +156,7 @@ export default {
     data: Array,
     columnDefs: Array,
   },
-  setup(props){
+  setup(props) {
     // menu state
     const isMenuOpen = ref(false);
     const selectedColumnDef = ref(null);
@@ -175,44 +180,11 @@ export default {
       const order = sortList.value[_sortKey] || 1;
 
       if (Object.keys(_filterList).length) {
-        data = data.filter(function (row) {
-          return Object.keys(row).some(function (key) {
-            if (!Object.prototype.hasOwnProperty.call(_filterList, key))
-              return false;
-
-            const fieldFilter = _filterList[key];
-            const isFieldFilterArray = Array.isArray(fieldFilter);
-
-            if (isFieldFilterArray) {
-              const fieldFilterList = fieldFilter;
-              return fieldFilterList.includes(row[key]);
-            }
-
-            const columnDef = columnDefs.find(
-              (columnDef) => columnDef.field === key
-            );
-            const { options } = columnDef;
-            const fieldFilterLc = (fieldFilter ?? "").toLowerCase();
-
-            if (!options)
-              return String(row[key]).toLowerCase().includes(fieldFilterLc);
-
-            const filterOptionKeys = options.list
-              .filter((o) =>
-                o[options.value].toLowerCase().includes(fieldFilterLc))
-              .map((o) => o[options.key]);
-
-            return filterOptionKeys.includes(row[key]);
-          });
-        });
+        data = filterData(data, _filterList, columnDefs);
       }
 
       if (_sortKey) {
-        data = data.slice().sort(function (a, b) {
-          a = a[_sortKey];
-          b = b[_sortKey];
-          return (a === b ? 0 : a > b ? 1 : -1) * order;
-        });
+        data = sortData(data, _sortKey, order);
       }
 
       return data;
@@ -301,6 +273,12 @@ export default {
       return !item ? rawRowValue : item[options.value];
     }
 
+    function exportToCSV() {
+      const csvData = tableToCSV();
+
+      downloadCSV(csvData);
+    }
+
     return {
       // state
       isMenuOpen,
@@ -323,9 +301,10 @@ export default {
       clearFilter,
       filterBy,
       renderCell,
+      exportToCSV,
     };
   },
-}
+};
 </script>
 
 <style lang="scss" scoped>
@@ -464,8 +443,6 @@ export default {
             cursor: default;
           }
         }
-
-
       }
     }
 
@@ -480,6 +457,7 @@ export default {
         height: 22px;
         margin: 16px 0;
         font-weight: 600;
+        color: #6a6f66;
       }
       .filter-sorting {
         font-weight: 600;
@@ -494,6 +472,7 @@ export default {
           outline: none;
           height: 16px;
           margin-bottom: 8px;
+          color: #7992a5;
 
           &:last-of-type {
             margin-bottom: 0;
@@ -518,6 +497,11 @@ export default {
         .filter-option {
           text-align: left;
           margin-left: 16px;
+
+          label {
+            color: #7992a5;
+            font-weight: 600;
+          }
         }
       }
 
@@ -530,6 +514,25 @@ export default {
         button {
           margin-right: 16px;
           height: 22px;
+          font-weight: 600;
+
+          &.clear-filter {
+            color: #f9efdd;
+            background-color: #dfab55;
+            border: solid 1px #dfab55;
+          }
+
+          &.apply-filter {
+            color: #f9efdd;
+            background-color: #639dd8;
+            border: solid 1px #242424;
+          }
+
+          &.close-filter {
+            color: #4a4a4a;
+            background-color: #fcfcfc;
+            border: solid 1px #d8d8d8;
+          }
 
           &:last-of-type {
             margin-right: 0;
@@ -539,9 +542,28 @@ export default {
     }
 
     .table-total-wrapper {
+      display: flex;
+      justify-content: space-between;
       padding: 5px 20px;
-      text-align: left;
       background-color: #dcdcdc;
+
+      .table-actions {
+        button {
+          font-weight: 600;
+          color: #4a4a4a;
+          background-color: #fcfcfc;
+          border: solid 1px #d8d8d8;
+          margin-right: 8px;
+
+          &:disabled {
+            opacity: 0.66;
+          }
+
+          &:last-of-type {
+            margin-right: 0;
+          }
+        }
+      }
     }
 
     .table-body-wrapper {
